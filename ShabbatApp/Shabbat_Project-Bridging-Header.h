@@ -4,15 +4,19 @@
 
 
 
-#import <Parse/Parse.h>
-#import <Bolts/Bolts.h>
+@import Firebase;
 #import <FBSDKCoreKit/FBSDKCoreKit.h>
 #import <FBSDKLoginKit/FBSDKLoginKit.h>
-#import <Firebase/Firebase.h>
-
+#import <Google/SignIn.h>
+#import <JSQMessagesViewController/JSQMessagesViewController.h>
+#import <JSQSystemSoundPlayer/JSQSystemSoundPlayer.h>
+#import "JSQMessages.h"
+#import "JSQMessageData.h"
+#import "DBManager.h"
 #import <MMDrawerController/MMDrawerController.h>
 #import "MMDrawerController+Storyboard.h"
 #import <MMDrawerController/UIViewController+MMDrawerController.h>
 #import <MMDrawerController/MMDrawerBarButtonItem.h>
+
 
 

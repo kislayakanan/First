@@ -16,9 +16,11 @@ class LoginViewController: UIViewController,UITextFieldDelegate
     @IBOutlet var emailFld: UITextField!
     var USER: String?
     
-    var ref = Firebase(url:"https://shabbatapp.firebaseio.com")
-    var users = Firebase(url:"https://shabbatapp.firebaseio.com/USERS")
-    var user_cast = Firebase(url:"https://shabbatapp.firebaseio.com/USERCAST")
+    //var ref = Firebase(url:"https://shabbatapp.firebaseio.com")
+    var ref = FIRDatabase.database().reference()
+    
+    //var users = Firebase(url:"https://shabbatapp.firebaseio.com/USERS")
+    //var user_cast = Firebase(url:"https://shabbatapp.firebaseio.com/USERCAST")
     
     override func viewDidLoad()
     {
@@ -39,10 +41,6 @@ class LoginViewController: UIViewController,UITextFieldDelegate
             remamberBtn.setImage( UIImage(named:"checked.png"), forState: .Normal)
         }
         
-        
-        navigationController!.navigationBar.barTintColor = UIColor.orangeColor()
-        
-        
         let button = UIButton(type: .Custom)
         button.addTarget(self, action:#selector(LoginViewController.backMethod), forControlEvents: .TouchUpInside)
         button.setImage(UIImage(named: "backicon"), forState: .Normal)
@@ -53,7 +51,7 @@ class LoginViewController: UIViewController,UITextFieldDelegate
         
         let nav1Lbl = UILabel(frame: CGRectMake(0, 0, 200, 44))
         nav1Lbl.text = "LOGIN"
-        nav1Lbl.font = UIFont(name: "Helvetica-Bold", size: 19)
+        nav1Lbl.font = UIFont(name: "Montserrat-Bold", size: 20)
         nav1Lbl.textAlignment = .Center
         nav1Lbl.textColor = UIColor.whiteColor()
         self.navigationItem.titleView = nav1Lbl
@@ -68,6 +66,7 @@ class LoginViewController: UIViewController,UITextFieldDelegate
     override func viewWillAppear(animated: Bool)
     {
         navigationController!.navigationBar.barTintColor = UIColor.orangeColor()
+        
     }
     
     func backMethod()
@@ -81,13 +80,6 @@ class LoginViewController: UIViewController,UITextFieldDelegate
         signUp.USER = USER
         self.navigationController?.pushViewController(signUp, animated: true)
     }
-    
-//    func textFieldShouldReturn(textField: UITextField) -> Bool
-//    {
-//        self.view.endEditing(true)
-//        return false
-//    }
-    
     
     @IBAction func tickFunction(sender: UIButton)
     {
@@ -114,8 +106,12 @@ class LoginViewController: UIViewController,UITextFieldDelegate
         let forgotVC = (self.storyboard!.instantiateViewControllerWithIdentifier("ForgotPassVC")) as UIViewController      
         self.navigationController?.pushViewController(forgotVC, animated: true)
     }
+    
+    
+    //MARK: LOGIN ACTION
     @IBAction func loginAction(sender: AnyObject)
     {
+        //Check first internet accessibility
         if ReachabilityNet.isConnectedToNetwork() == true
         {
             print("Internet connection OK")
@@ -136,88 +132,186 @@ class LoginViewController: UIViewController,UITextFieldDelegate
             {
                 print("it is valid email")
                 
-                
-                
-                
-                
-                
-                
-                ref.authUser(emailFld.text!, password: passFld.text!)
-                {
-                    error, authData in
-                    if (error != nil)
+                FIRAuth.auth()?.signInWithEmail(emailFld.text!, password: passFld.text!) { (user, error) in
+                    
+                    if error == nil
                     {
-                        // an error occurred while attempting login
-                        if let errorCode = FAuthenticationError(rawValue: error.code)
-                        {
-                            switch (errorCode)
-                            {
-                            case .UserDoesNotExist:
-                                self.alertShowMethod("Error", message: "Email id doesn't match")
-                            case .InvalidEmail:
-                                print("Handle invalid email")
-                                self.alertShowMethod("Error", message: "Please enter valid email id")
-                                
-                            case .InvalidPassword:
-                                print("Handle invalid password")
-                                self.alertShowMethod("Error", message: "Password does not match")
-                            default:
-                                print("Handle default situation")
-                            }
+                    
+                            let myActivityIndicator = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.WhiteLarge)
+                            myActivityIndicator.transform = CGAffineTransformMakeScale(0.75, 0.75)
+                            myActivityIndicator.center = self.view.center
+                            myActivityIndicator.startAnimating()
+                            self.view.addSubview(myActivityIndicator)
+                            
+                            let user_cast = self.ref.child("USERCAST")
+                            user_cast.observeEventType(.Value, withBlock:
+                                {
+                                    snapshot in
+                                    
+                                    let dict = snapshot.value as? NSDictionary
+                                    if dict != nil
+                                    {
+                                        if dict!.objectForKey(user!.uid) != nil
+                                        {
+                                            if dict!.objectForKey(user!.uid)!.objectForKey("usercast") as? String == self.USER!
+                                            {
+                                                
+                                                let defaults = NSUserDefaults.standardUserDefaults()
+                                                defaults.setObject(user!.uid, forKey: "current_userID")
+                                                
+                                                print("Login Successfully")
+                                                if self.USER == "HOST"
+                                                {
+                                                    let hostVC = (self.storyboard!.instantiateViewControllerWithIdentifier("HostVC")) as! HostVC
+                                                    hostVC.user_id = user!.uid
+                                                    let defaults = NSUserDefaults.standardUserDefaults()
+                                                    defaults.setObject(user!.uid, forKey: "current_userID")
+                                                    defaults.setObject(self.emailFld.text, forKey: "email")
+                                                    defaults.setObject(self.passFld.text, forKey: "password")
+                                                    defaults.setObject(self.USER, forKey: "user_cast")
+                                                    self.navigationController?.pushViewController(hostVC, animated: true)
+                                                }
+                                                else if self.USER == "SEEKER"
+                                                {
+                                                    let seek = (self.storyboard!.instantiateViewControllerWithIdentifier("SeekVC")) as! SeekVC
+                                                    seek.user_id = user!.uid
+                                                    let defaults = NSUserDefaults.standardUserDefaults()
+                                                    defaults.setObject(user!.uid, forKey: "current_userID")
+                                                    defaults.setObject(self.emailFld.text, forKey: "email")
+                                                    defaults.setObject(self.passFld.text, forKey: "password")
+                                                    defaults.setObject(self.USER, forKey: "user_cast")
+                                                    self.navigationController?.pushViewController(seek, animated: true)
+                                                    
+                                                }
+                                                
+                                                myActivityIndicator.stopAnimating()
+                                                self.alertShowMethod("", message: "You are logged in successfully")
+                                            }
+                                            else
+                                            {
+                                                self.alertShowMethod("Error", message: "You are not " + self.USER!)
+                                                myActivityIndicator.stopAnimating()
+                                            }
+                                            
+                                        }
+                                    }
+                            })                        
                         }
-                    }
+                    
                     else
                     {
-                        
-                        let myActivityIndicator = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.WhiteLarge)
-                        myActivityIndicator.transform = CGAffineTransformMakeScale(0.75, 0.75)
-                        myActivityIndicator.center = self.view.center
-                        myActivityIndicator.startAnimating()
-                        self.view.addSubview(myActivityIndicator)
-                        
-                        
-                        self.user_cast.observeEventType(.Value, withBlock:
-                            {
-                                snapshot in
-                                
-                                
-                                let dict = snapshot.value as? NSDictionary
-                                
-                                
-
-                                if dict!.objectForKey(self.ref.authData.uid)!.objectForKey("usercast") as? String == self.USER!
-                                {
-                                  
-                                    
-                                    
-                                    print("Login Successfully")
-                                    if self.USER == "HOST"
-                                    {
-                                        let hostVC = (self.storyboard!.instantiateViewControllerWithIdentifier("HostVC")) as! HostVC
-                                        hostVC.user_id = self.ref.authData.uid
-                                        self.navigationController?.pushViewController(hostVC, animated: true)
-                                    }
-                                    else if self.USER == "SEEKER"
-                                    {
-                                        let seek = (self.storyboard!.instantiateViewControllerWithIdentifier("SeekVC")) as! SeekVC
-                                        seek.user_id = self.ref.authData.uid
-                                        self.navigationController?.pushViewController(seek, animated: true)
-                                        
-                                    }
-                                    
-                                    myActivityIndicator.stopAnimating()
-                                    self.alertShowMethod("LOG IN", message: "You are logged in successfully")
-                                }
-                                else
-                                {
-                                  self.alertShowMethod("Error", message: "You are not " + self.USER!)
-                                  myActivityIndicator.stopAnimating()
-                                }
-                                
-                            })
+                        print(error)
+                            // an error occurred while attempting login
+                            //if let errorCode = FAuthenticationError(rawValue: error.code)
+//                            {
+//                                switch (errorCode)
+//                                {
+//                                case .UserDoesNotExist:
+//                                    self.alertShowMethod("Error", message: "Email id doesn't match")
+//                                case .InvalidEmail:
+//                                    print("Handle invalid email")
+//                                    self.alertShowMethod("Error", message: "Please enter valid email id")
+//                                    
+//                                case .InvalidPassword:
+//                                    print("Handle invalid password")
+//                                    self.alertShowMethod("Error", message: "Password does not match")
+//                                default:
+//                                    print("Handle default situation")
+//                                }
+//                            }
                         
                     }
                 }
+                
+                
+               // ref.authUser(emailFld.text!, password: passFld.text!)
+//                {
+//                    error, authData in
+//                    
+//                    if (error != nil)
+//                    {
+//                        // an error occurred while attempting login
+//                        if let errorCode = FAuthenticationError(rawValue: error.code)
+//                        {
+//                            switch (errorCode)
+//                            {
+//                            case .UserDoesNotExist:
+//                                self.alertShowMethod("Error", message: "Email id doesn't match")
+//                            case .InvalidEmail:
+//                                print("Handle invalid email")
+//                                self.alertShowMethod("Error", message: "Please enter valid email id")
+//                                
+//                            case .InvalidPassword:
+//                                print("Handle invalid password")
+//                                self.alertShowMethod("Error", message: "Password does not match")
+//                            default:
+//                                print("Handle default situation")
+//                            }
+//                        }
+//                    }
+//                    else
+//                    {
+//                        let myActivityIndicator = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.WhiteLarge)
+//                        myActivityIndicator.transform = CGAffineTransformMakeScale(0.75, 0.75)
+//                        myActivityIndicator.center = self.view.center
+//                        myActivityIndicator.startAnimating()
+//                        self.view.addSubview(myActivityIndicator)
+//                        
+//                       let user_cast = ref.child("USERCAST")
+//                        user_cast.observeEventType(.Value, withBlock:
+//                            {
+//                                snapshot in
+//                                
+//                                let dict = snapshot.value as? NSDictionary
+//                                if dict != nil
+//                                {
+//                                    if dict!.objectForKey(user!.uid) != nil
+//                                    {
+//                                        if dict!.objectForKey(user!.uid)!.objectForKey("usercast") as? String == self.USER!
+//                                        {
+//                                            
+//                                            let defaults = NSUserDefaults.standardUserDefaults()
+//                                            defaults.setObject(user!.uid, forKey: "current_userID")
+//                                            
+//                                            print("Login Successfully")
+//                                            if self.USER == "HOST"
+//                                            {
+//                                                let hostVC = (self.storyboard!.instantiateViewControllerWithIdentifier("HostVC")) as! HostVC
+//                                                hostVC.user_id = user!.uid
+//                                                let defaults = NSUserDefaults.standardUserDefaults()
+//                                                defaults.setObject(user!.uid, forKey: "current_userID")
+//                                                defaults.setObject(self.emailFld.text, forKey: "email")
+//                                                defaults.setObject(self.passFld.text, forKey: "password")
+//                                                defaults.setObject(self.USER, forKey: "user_cast")
+//                                                self.navigationController?.pushViewController(hostVC, animated: true)
+//                                            }
+//                                            else if self.USER == "SEEKER"
+//                                            {
+//                                                let seek = (self.storyboard!.instantiateViewControllerWithIdentifier("SeekVC")) as! SeekVC
+//                                                seek.user_id = user!.uid
+//                                                let defaults = NSUserDefaults.standardUserDefaults()
+//                                                defaults.setObject(user!.uid, forKey: "current_userID")
+//                                                defaults.setObject(self.emailFld.text, forKey: "email")
+//                                                defaults.setObject(self.passFld.text, forKey: "password")
+//                                                defaults.setObject(self.USER, forKey: "user_cast")
+//                                                self.navigationController?.pushViewController(seek, animated: true)
+//                                                
+//                                            }
+//                                            
+//                                            myActivityIndicator.stopAnimating()
+//                                            self.alertShowMethod("", message: "You are logged in successfully")
+//                                        }
+//                                        else
+//                                        {
+//                                            self.alertShowMethod("Error", message: "You are not " + self.USER!)
+//                                            myActivityIndicator.stopAnimating()
+//                                        }
+//                                        
+//                                    }
+//                                }
+//                            })                        
+//                    }
+//                }
             }
                 
             else

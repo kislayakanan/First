@@ -6,10 +6,14 @@
 //  Copyright © 2016 WebAstral. All rights reserved.
 //
 
+
 import UIKit
 
 class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigationControllerDelegate,UITextFieldDelegate,UITableViewDataSource,UITableViewDelegate,UIActionSheetDelegate
 {
+    @IBOutlet var editprofilepicBtn: UIButton!
+    @IBOutlet var profile_updatePic: UIImageView!
+    @IBOutlet var ageBtn: UIButton!
     @IBOutlet var updateBG: UIImageView!
     @IBOutlet var registrationLogo: UIImageView!
     
@@ -42,10 +46,16 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
     var nav1Lbl = UILabel()
     var boolvalue = Bool()
     var isExist = "NotExist"
+    var imag = 0
+    var strValue = ""
     
-    var ref = Firebase(url:"https://shabbatapp.firebaseio.com")
-    var users = Firebase(url:"https://shabbatapp.firebaseio.com/USERS")
-    var user_cast = Firebase(url:"https://shabbatapp.firebaseio.com/USERCAST")
+    //let postRef = ref.child("posts")
+    //var ref = Firebase(url:"https://shabbatapp.firebaseio.com")
+    var ref = FIRDatabase.database().reference()
+    //var users = Firebase(url:"https://shabbatapp.firebaseio.com/USERS")
+    //var user_cast = Firebase(url:"https://shabbatapp.firebaseio.com/USERCAST")
+    //var images = Firebase(url:"https://shabbatapp.firebaseio.com/IMAGES")
+    
     
     let imagePicker = UIImagePickerController()
      var placesTableView: UITableView  =   UITableView()
@@ -55,12 +65,30 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
  
     var ageRange = ["10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70"]
     
+    @IBAction func openMediaUpdate(sender: UIButton)
+    {
+        self.openMediaMethod("hello")
+        
+    }
     override func viewDidLoad()
     {
         super.viewDidLoad()
- 
         
-        distanceLbl.text = "50 KM"
+        selectedLocation = ""
+        selectedLocationId = ""
+        //Current user id 
+        user_ID = NSUserDefaults.standardUserDefaults().objectForKey("current_userID") as? String
+        
+        
+        
+        
+        editprofilepicBtn.hidden = true
+        editprofilepicBtn.userInteractionEnabled = false
+        profile_updatePic.clipsToBounds = true
+        profile_updatePic.layer.cornerRadius = 0.5 * profile_updatePic.bounds.size.width
+        profile_updatePic.hidden = true
+        
+        distanceLbl.text = "50 Miles"
         
         fullName.attributedPlaceholder = NSAttributedString(string:"Full Name*",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
         emailFld.attributedPlaceholder = NSAttributedString(string:"Email*",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
@@ -81,7 +109,7 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
         navigationController!.navigationBar.barTintColor = UIColor.blackColor()
         nav1Lbl = UILabel(frame: CGRectMake(0, 0, 200, 44))
         nav1Lbl.text = "Registration"
-        nav1Lbl.font = UIFont(name: "Helvetica-Bold", size: 19)
+        nav1Lbl.font = UIFont(name: "Montserrat-Bold", size: 20)
         nav1Lbl.textAlignment = .Center
         nav1Lbl.textColor = UIColor.whiteColor()
         self.navigationItem.titleView = nav1Lbl
@@ -95,8 +123,6 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
         
 
         
-        locFld.addTarget(self, action:#selector(SeekVC.edited), forControlEvents:UIControlEvents.EditingChanged)
-        
         placesTableView.frame   =   CGRectMake(0, locFld.frame.origin.y+locFld.frame.height, self.view.frame.width, self.view.frame.height-locFld.frame.origin.y-locFld.frame.height);
         placesTableView.backgroundColor = UIColor.whiteColor()
         placesTableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: "cell")
@@ -108,10 +134,6 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
         profilePicture.layer.cornerRadius = 0.5 * profilePicture.bounds.size.width
         
     }
-    
-    
-    
-    
     
     
     @IBAction func DoneBtnAction(sender: AnyObject)
@@ -163,69 +185,125 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
     
     @IBAction func distancePickerMethod(sender: UISlider)
     {
+        self.view.endEditing(true)
        let value = Int(sender.value)
-        distanceLbl.text = "\(value) KM"
+        distanceLbl.text = "\(value) Miles"
     }
     override func viewWillAppear(animated: Bool)
     {
-        
-        if update == "UPDATE"
+        if (selectedLocation != "")
         {
+            locFld.text = selectedLocation
+        }
+        else
+        {
+        if update == "UPDATE" && imag == 0
+        {
+            editprofilepicBtn.hidden = false
+            profile_updatePic.hidden = false
+            profilePicture.hidden = true
+            ageBtn.setImage(UIImage(named: "dropdown"), forState: .Normal)
+            
+            
+            //Activity Controller
+            let myActivityIndicator = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.WhiteLarge)
+            myActivityIndicator.transform = CGAffineTransformMakeScale(0.75, 0.75)
+            myActivityIndicator.center = self.view.center
+            myActivityIndicator.startAnimating()
+            self.view.addSubview(myActivityIndicator)
+            
             
             updateBG.image = UIImage(named: "profile-bg")
             registrationLogo.hidden = true
             registrationLbl.hidden = true
-            nav1Lbl.text = "Update"
+            nav1Lbl.text = "UPDATE"
             genderIcon.image = UIImage(named: "edit-gender")
             navigationController!.navigationBar.barTintColor = UIColor.orangeColor()
             emailFld.userInteractionEnabled = false
             userNameFld.userInteractionEnabled = false
-            profilePicture.frame = CGRect (x: profilePicture.frame.origin.x-profilePicture.frame.width/2, y: profilePicture.frame.origin.y-profilePicture.frame.width, width: profilePicture.frame.width*2, height: profilePicture.frame.width*2)
-            profilePicture.clipsToBounds = true
-            profilePicture.layer.cornerRadius = 0.5 * profilePicture.bounds.size.width
             
+            let users = ref.child("USERS")
             users.observeEventType(.Value, withBlock:
                 {
-                    snapshot in                    
-                    
-                    print(snapshot.value.count)
-                    
+                    snapshot in
                     
                     self.dict = snapshot.value as? NSDictionary
-                    print(self.dict)
+                    //Check result first
+                    if self.dict != nil
+                    {
+                        if self.dict?.objectForKey(self.user_ID!) != nil
+                        {
+                            self.fullName.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("fullname") as? String
+                            self.userNameFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("username") as? String
+                            self.emailFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("email") as? String
+                            self.genderFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("gender") as? String
+                            self.ageFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("age") as? String
+                            self.passwordFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("password") as? String
+                            self.locFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("location") as? String
+                            let distanceStr = self.dict?.objectForKey(self.user_ID!)?.objectForKey("distance") as? String
+                            self.distanceLbl.text = distanceStr
+                            var token = distanceStr!.componentsSeparatedByString(" ")
+                            let val = Float(token[0])
+                            self.slider.value = val!
+                            self.statusFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("status") as? String
+                            self.tagLineFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("tagline") as? String
+                            myActivityIndicator.stopAnimating()
+                        }
+                        else
+                        {
+                            myActivityIndicator.stopAnimating()
+                            self.alertShowMethod("", message: "User data not found")
+                        }
+                    }
+
                     
-                    self.fullName.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("fullname") as? String
-                    self.userNameFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("username") as? String
-                    self.emailFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("email") as? String
-                    self.genderFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("gender") as? String
-                    self.ageFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("age") as? String
-                    self.passwordFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("password") as? String
-                    self.locFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("location") as? String
-                    let distanceStr = self.dict?.objectForKey(self.user_ID!)?.objectForKey("distance") as? String
-                    self.distanceLbl.text = distanceStr
-                    var token = distanceStr!.componentsSeparatedByString(" ")
-                    let val = Float(token[0])
-                    self.slider.value = val!
-                    self.statusFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("status") as? String
-                    self.tagLineFld.text = self.dict?.objectForKey(self.user_ID!)?.objectForKey("tagline") as? String
-                                       
-                    
-                    
-                    let base64EncodedString = self.dict?.objectForKey(self.user_ID!)?.objectForKey("profile_pic")
-                    let imageData = NSData(base64EncodedString: base64EncodedString as! String,
-                        options: NSDataBase64DecodingOptions.IgnoreUnknownCharacters)
-                    let decodedImage = UIImage(data:imageData!)
-                    self.profilePicture.setImage(decodedImage, forState: .Normal)
-                    
+            })
+            
+            
+            //Activity Controller
+            let myActivityIndicator1 = UIActivityIndicatorView(activityIndicatorStyle: UIActivityIndicatorViewStyle.WhiteLarge)
+            myActivityIndicator1.transform = CGAffineTransformMakeScale(0.75, 0.75)
+            myActivityIndicator1.center = profile_updatePic.center
+            myActivityIndicator1.startAnimating()
+            self.view.addSubview(myActivityIndicator1)
+            
+            let images = ref.child("IMAGES")
+            images.observeEventType(.Value, withBlock:
+                {
+                    snapshot in
+                    self.dict = snapshot.value as? NSDictionary
+                    if self.dict != nil
+                    {
+                        if self.dict?.objectForKey(self.user_ID!) != nil
+                        {
+                            let base64EncodedString = self.dict?.objectForKey(self.user_ID!)?.objectForKey("profile_pic")
+                            
+                            let imageData = NSData(base64EncodedString: base64EncodedString as! String,
+                                options: NSDataBase64DecodingOptions.IgnoreUnknownCharacters)
+                            let decodedImage = UIImage(data:imageData!)
+                            self.profile_updatePic.image = decodedImage
+                            myActivityIndicator1.stopAnimating()
+                            self.editprofilepicBtn.userInteractionEnabled = true
+                            
+                        }
+                        else
+                        {
+                            myActivityIndicator1.stopAnimating()
+                            self.alertShowMethod("", message: "Profile picture not available")
+                        }
+                    }
             })
             
             registerBtn.setImage(UIImage(named: "update-button"), forState: .Normal)
         }
-        navigationController!.navigationBar.barTintColor = UIColor.blackColor()
+      }
+    
     }
     
     @IBAction func genderMethod(sender: AnyObject)
     {
+        self.view.endEditing(true)
+        
         if sender.tag == 25
         {
             genderFld.text = "Male"
@@ -331,12 +409,14 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
     
     @IBAction func ageBtn(sender: AnyObject)
     {
+        self.view.endEditing(true)
         agePicker.hidden = false
         DoneView.hidden = false
     }
     
     @IBAction func profileBtn(sender: AnyObject)
     {
+        self.view.endEditing(true)
         imagePicker.delegate = self
         imagePicker.allowsEditing = false
         imagePicker.sourceType = .PhotoLibrary
@@ -349,112 +429,285 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
     {
         if let pickedImage = info[UIImagePickerControllerOriginalImage] as? UIImage
         {
-            profilePicture.contentMode = .ScaleToFill
-            profilePicture.setImage(pickedImage, forState: .Normal)
+            if update == "UPDATE"
+            {
+                //profile_updatePic.contentMode = .ScaleToFill
+                profile_updatePic.image = pickedImage
+                imag = 1
+            }
+            else
+            {
+                profilePicture.contentMode = .ScaleToFill
+                profilePicture.setImage(pickedImage, forState: .Normal)
+            }
+           
         }
         
         dismissViewControllerAnimated(true, completion: nil)
-    }
-    
-    
+    }    
 
     //MARK: registration method
     @IBAction func submitBtn(sender: AnyObject)
     {
-        if fullName.text == "" || emailFld.text == "" || userNameFld.text == "" || passwordFld.text == "" || genderFld.text == "" || locFld.text == "" || ageFld.text == "" || tagLineFld.text == "" || statusFld.text == ""
-        {
-            self.alertShowMethod("", message: "Please fill all fields")
-        }
-        else if profilePicture.currentImage == UIImage(named:"uploadpic")
-        {
-            self.alertShowMethod("", message: "Please Select profile picture")
-        }
         
+    if ReachabilityNet.isConnectedToNetwork() == true
+    {
+      print("Internet connection OK")
+        if update == "UPDATE"
+        {
+            if fullName.text == "" || emailFld.text == "" || userNameFld.text == "" || passwordFld.text == "" || genderFld.text == "" || locFld.text == "" || ageFld.text == "" || tagLineFld.text == "" || statusFld.text == ""
+            {
+                self.alertShowMethod("", message: "Please fill all fields")
+            }
+            else
+            {
+              
+                //To save image
+                var data1: NSData = NSData()
+                if let image = self.profile_updatePic.image
+                {
+                    data1 = UIImageJPEGRepresentation(image,0.0)!
+                }
+                let base64String = data1.base64EncodedStringWithOptions(NSDataBase64EncodingOptions.Encoding64CharacterLineLength)
+                
+                let data =
+                    [
+                        "fullname":self.fullName.text!,
+                        "age":self.ageFld.text!,
+                        "password":self.passwordFld.text!,
+                        "location":self.locFld.text!,
+                        "location_id":selectedLocationId,
+                        "distance":self.distanceLbl.text!,
+                        "status":self.statusFld.text!,
+                        "tagline":self.tagLineFld.text!,
+                        ]
+                
+                let users = ref.child("USERS")
+                let current_user = users.child(user_ID!)
+                current_user.updateChildValues(data)
+                
+                let images = ref.child("IMAGES")
+                let node = images.child(user_ID!)
+                node.updateChildValues(["profile_pic":base64String])
+                
+                self.alertShowMethod("", message: "Your profile is updated")
+                self.navigationController?.popViewControllerAnimated(true)
+            }
+            
+        }
         else
         {
-            ref.createUser(emailFld.text!, password: passwordFld.text!,
-                           withValueCompletionBlock:
-                { error, result in
-                    if error != nil
+            print("Sign Up btn is clicked")
+            if fullName.text == "" || emailFld.text == "" || userNameFld.text == "" || passwordFld.text == "" || genderFld.text == "" || locFld.text == "" || ageFld.text == "" || tagLineFld.text == "" || statusFld.text == ""
+            {
+                self.alertShowMethod("", message: "Please fill all fields")
+            }
+            else if profilePicture.currentImage == UIImage(named:"uploadpic")
+            {
+                self.alertShowMethod("", message: "Please Select profile picture")
+            }
+                
+            else
+            {
+                FIRAuth.auth()?.createUserWithEmail(emailFld.text!, password: passwordFld.text!) { (user, error) in
+                    
+                    if error == nil
+                    {
+                        
+                            
+                            //To save image
+                            var data1: NSData = NSData()
+                            if let image = self.profilePicture.currentImage
+                            {
+                                data1 = UIImageJPEGRepresentation(image,0.0)!
+                            }
+                            let base64String = data1.base64EncodedStringWithOptions(NSDataBase64EncodingOptions.Encoding64CharacterLineLength)
+                            
+                            
+                            // uid is the unique id of user
+                            let uid = user!.uid
+                            
+                            let defaults = NSUserDefaults.standardUserDefaults()
+                            defaults.setObject(uid, forKey: "current_userID")
+                            
+                            print(NSUserDefaults.standardUserDefaults().objectForKey("current_userID"))
+                            let users = self.ref.child("USERS")
+                            let newUser = users.child(uid)
+                            let user_cast = self.ref.child("USERCAST")
+                            let usr_cast = user_cast.child(uid)
+                        
+                            let data =
+                                [
+                                    "fullname":self.fullName.text!,
+                                    "username":self.userNameFld.text!,
+                                    "gender":self.genderFld.text!,
+                                    "age":self.ageFld.text!,
+                                    "email":self.emailFld.text!,
+                                    "password":self.passwordFld.text!,
+                                    "location":self.locFld.text!,
+                                    "location_id":selectedLocationId,
+                                    "distance":self.distanceLbl.text!,
+                                    "status":self.statusFld.text!,
+                                    "tagline":self.tagLineFld.text!,
+                                    "usercast":self.USER!,
+                                    ]
+                            
+                            
+                            let images = self.ref.child("IMAGES")
+                            let node = images.child(uid)
+                            node.setValue(["profile_pic":base64String])
+                            
+                            let data2 = [ "usercast" : self.USER!]
+                            usr_cast.setValue(data2)
+                            newUser.setValue(data)
+                            print("Successfully created user account with uid: \(uid)")
+                            
+                            if self.USER == "HOST"
+                            {
+                                let hostVC = (self.storyboard!.instantiateViewControllerWithIdentifier("HostVC")) as! HostVC
+                                hostVC.user_id = uid
+                                let defaults = NSUserDefaults.standardUserDefaults()
+                                defaults.setObject(uid, forKey: "current_userID")
+                                defaults.setObject(self.emailFld.text, forKey: "email")
+                                defaults.setObject(self.passwordFld.text, forKey: "password")
+                                defaults.setObject(self.USER, forKey: "user_cast")
+                                self.navigationController?.pushViewController(hostVC, animated: true)
+                            }
+                            else if self.USER == "SEEKER"
+                            {
+                                let seek = (self.storyboard!.instantiateViewControllerWithIdentifier("SeekVC")) as! SeekVC
+                                seek.user_id = uid
+                                let defaults = NSUserDefaults.standardUserDefaults()
+                                defaults.setObject(uid, forKey: "current_userID")
+                                defaults.setObject(self.emailFld.text, forKey: "email")
+                                defaults.setObject(self.passwordFld.text, forKey: "password")
+                                defaults.setObject(self.USER, forKey: "user_cast")
+                                self.navigationController?.pushViewController(seek, animated: true)
+                            }
+                            self.alertShowMethod("", message: "Registration successfully done")
+                            
+                        
+                    }
+                    else
                     {
                         self.alertShowMethod("", message: "The specified email address is already in use")
                         // There was an error creating the account
                         print(error);
                     }
-                    else
-                    {
-                        
-                       //To save image
-                        var data1: NSData = NSData()
-                        if let image = self.profilePicture.currentImage
-                        {
-                            data1 = UIImageJPEGRepresentation(image,0.1)!
-                        }
-                        let base64String = data1.base64EncodedStringWithOptions(NSDataBase64EncodingOptions.Encoding64CharacterLineLength)
-                        
-                        
-                        // uid is the unique id of user
-                        let uid = result["uid"] as? String
-                        
-                        let newUser = self.users.childByAppendingPath(uid)
-                        let usr_cast = self.user_cast.childByAppendingPath(uid)
-                        
-                        let data =
-                            [
-                                "fullname":self.fullName.text!,
-                                "username":self.userNameFld.text!,
-                                "gender":self.genderFld.text!,
-                                "age":self.ageFld.text!,
-                                "email":self.emailFld.text!,
-                                "password":self.passwordFld.text!,
-                                "location":self.locFld.text!,
-                                "distance":self.distanceLbl.text!,
-                                "status":self.statusFld.text!,
-                                "tagline":self.tagLineFld.text!,
-                                "usercast":self.USER!,
-                                "profile_pic":base64String
-                        ]
-                        
-                        let data2 = [ "usercast" : self.USER!]
-                        usr_cast.setValue(data2)
-                        newUser.setValue(data)
-                        print("Successfully created user account with uid: \(uid)")
-                        
-                        if self.USER == "HOST"
-                        {
-                            let hostVC = (self.storyboard!.instantiateViewControllerWithIdentifier("HostVC")) as! HostVC
-                            hostVC.user_id = uid
-                            self.navigationController?.pushViewController(hostVC, animated: true)
-                        }
-                        else if self.USER == "SEEKER"
-                        {
-                            let seek = (self.storyboard!.instantiateViewControllerWithIdentifier("SeekVC")) as! SeekVC
-                            seek.user_id = uid
-                            self.navigationController?.pushViewController(seek, animated: true)
-                        }
-                        self.alertShowMethod("", message: "Registration successfully done")
-                        
-                    }
-            })
-
+                }
+//                ref.createUser(emailFld.text!, password: passwordFld.text!,
+//                               withValueCompletionBlock:
+//                    { error, result in
+//                        if error != nil
+//                        {
+//                            self.alertShowMethod("", message: "The specified email address is already in use")
+//                            // There was an error creating the account
+//                            print(error);
+//                        }
+//                        else
+//                        {
+//                            
+//                            //To save image
+//                            var data1: NSData = NSData()
+//                            if let image = self.profilePicture.currentImage
+//                            {
+//                                data1 = UIImageJPEGRepresentation(image,0.0)!
+//                            }
+//                            let base64String = data1.base64EncodedStringWithOptions(NSDataBase64EncodingOptions.Encoding64CharacterLineLength)
+//                            
+//                            
+//                            // uid is the unique id of user
+//                            let uid = result["uid"] as? String
+//                            
+//                            let defaults = NSUserDefaults.standardUserDefaults()
+//                            defaults.setObject(uid, forKey: "current_userID")
+//                            
+//                        print(NSUserDefaults.standardUserDefaults().objectForKey("current_userID"))
+//                            let users = ref.child("USERS")
+//                            let newUser = users.child(uid)
+//                            let usr_cast = self.user_cast.child(uid)
+//                            
+//                            let data =
+//                                [
+//                                    "fullname":self.fullName.text!,
+//                                    "username":self.userNameFld.text!,
+//                                    "gender":self.genderFld.text!,
+//                                    "age":self.ageFld.text!,
+//                                    "email":self.emailFld.text!,
+//                                    "password":self.passwordFld.text!,
+//                                    "location":self.locFld.text!,
+//                                    "location_id":selectedLocationId,
+//                                    "distance":self.distanceLbl.text!,
+//                                    "status":self.statusFld.text!,
+//                                    "tagline":self.tagLineFld.text!,
+//                                    "usercast":self.USER!,
+//                            ]
+//                            
+//                            
+//                            
+//                            let node = self.images.child(uid)
+//                            node.setValue(["profile_pic":base64String])
+//                            
+//                            let data2 = [ "usercast" : self.USER!]
+//                            usr_cast.setValue(data2)
+//                            newUser.setValue(data)
+//                            print("Successfully created user account with uid: \(uid)")
+//                            
+//                            if self.USER == "HOST"
+//                            {
+//                                let hostVC = (self.storyboard!.instantiateViewControllerWithIdentifier("HostVC")) as! HostVC
+//                                hostVC.user_id = uid
+//                                let defaults = NSUserDefaults.standardUserDefaults()
+//                                defaults.setObject(uid, forKey: "current_userID")
+//                                defaults.setObject(self.emailFld.text, forKey: "email")
+//                                defaults.setObject(self.passwordFld.text, forKey: "password")
+//                                defaults.setObject(self.USER, forKey: "user_cast")
+//                                self.navigationController?.pushViewController(hostVC, animated: true)
+//                            }
+//                            else if self.USER == "SEEKER"
+//                            {
+//                                let seek = (self.storyboard!.instantiateViewControllerWithIdentifier("SeekVC")) as! SeekVC
+//                                seek.user_id = uid
+//                                let defaults = NSUserDefaults.standardUserDefaults()
+//                                defaults.setObject(uid, forKey: "current_userID")
+//                                defaults.setObject(self.emailFld.text, forKey: "email")
+//                                defaults.setObject(self.passwordFld.text, forKey: "password")
+//                                defaults.setObject(self.USER, forKey: "user_cast")
+//                                self.navigationController?.pushViewController(seek, animated: true)
+//                            }
+//                            self.alertShowMethod("", message: "Registration successfully done")
+//                            
+//                        }
+//                })
+                
+                
+            }
             
+ 
         }
-        
     }
+    else
+    {
+       self.alertShowMethod("Internet connection error", message: "Plese try again")
+    }
+        
+}
     
 
     
     //MARK: textField  delegates
-    func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -> Bool
-    {
-        return true
+    func textFieldDidBeginEditing(textField: UITextField) {
+        print("TextField did begin editing method called")
+        
+        if textField == locFld
+        {
+            let presentSearchVC = (self.storyboard!.instantiateViewControllerWithIdentifier("PresentSerachViewController")) as UIViewController
+            
+            self.presentViewController(presentSearchVC, animated: true, completion: nil)
+        }
     }
-    
-//    func textFieldShouldReturn(textField: UITextField) -> Bool
-//    {
-//        self.view.endEditing(true)
-//        return false
-//    }
+
+
     
     func textFieldShouldEndEditing(textField: UITextField) -> Bool
     {
@@ -574,11 +827,12 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
     //MARK:  api function for autocomplete for places
     func apiFunction(typpedStr: String)
     {
+
         var mutString = NSString(string: typpedStr)
         
         mutString = mutString.stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLQueryAllowedCharacterSet())!
         
-        let url = NSURL(string: "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=" + (mutString as String) + "&types=address&language=fr&key=%20AIzaSyAqRxlbGhWi8TgHda6K23JRcTJciPmkBBc")
+        let url = NSURL(string: "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=" + (mutString as String) + "&types=(cities)&language=en&key=%20AIzaSyAqRxlbGhWi8TgHda6K23JRcTJciPmkBBc")
         let request = NSURLRequest(URL: url!)
         
         let config = NSURLSessionConfiguration.defaultSessionConfiguration()
@@ -623,8 +877,7 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
             }
             
         });
-        
-        // do whatever you need with the task e.g. run
+       
         task.resume()
         
     }
@@ -634,7 +887,6 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
     func alertShowMethod(Title:String, message:String)
     {
         let alert = UIAlertController(title: Title, message: message, preferredStyle: UIAlertControllerStyle.Alert)
-        
         alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Default, handler: nil))
         self.presentViewController(alert, animated: true, completion: nil)
     }
@@ -645,17 +897,7 @@ class RegistrationVC: UIViewController,UIImagePickerControllerDelegate,UINavigat
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
- 
 
 }
+
+

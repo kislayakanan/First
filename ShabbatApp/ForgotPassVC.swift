@@ -13,8 +13,8 @@ class ForgotPassVC: UIViewController
 
     @IBOutlet var passwordFld: UITextField!
     @IBOutlet var emailFld: UITextField!
-    var ref = Firebase(url:"https://shabbatapp.firebaseio.com")
-    
+   // var ref = Firebase(url:"https://shabbatapp.firebaseio.com")
+    var ref = FIRDatabase.database().reference()
     override func viewDidLoad()
     {
         super.viewDidLoad()
@@ -24,14 +24,13 @@ class ForgotPassVC: UIViewController
         let button = UIButton(type: .Custom)
         button.addTarget(self, action:#selector(ForgotPassVC.backMethod), forControlEvents: .TouchUpInside)
         button.setImage(UIImage(named: "backicon"), forState: .Normal)
-        //    button.tintColor =[UIColor blackColor];
         button.frame = CGRectMake(0, 0, 30, 30)
         let bBarBtn: UIBarButtonItem = UIBarButtonItem(customView: button)
         self.navigationItem.leftBarButtonItem = bBarBtn
         
         let nav1Lbl = UILabel(frame: CGRectMake(0, 0, 200, 44))
         nav1Lbl.text = "RESET PASSWORD"
-        nav1Lbl.font = UIFont(name: "Helvetica-Bold", size: 19)
+        nav1Lbl.font = UIFont(name: "Montserrat-Bold", size: 19)
         nav1Lbl.textAlignment = .Center
         nav1Lbl.textColor = UIColor.whiteColor()
         self.navigationItem.titleView = nav1Lbl
@@ -40,11 +39,16 @@ class ForgotPassVC: UIViewController
 
     func backMethod()
     {
+        
         self.navigationController?.popViewControllerAnimated(true)
+        self.view.endEditing(true)
     }
     
+    //MARK: RESET password action
     @IBAction func resetPasswordAction(sender: AnyObject)
     {
+        //To check first internet connection
+        emailFld.resignFirstResponder()
         
         if ReachabilityNet.isConnectedToNetwork() == true
         {
@@ -60,22 +64,34 @@ class ForgotPassVC: UIViewController
                 {
                     print("it is valid email")
                     
-                    ref.resetPasswordForUser(emailFld.text, withCompletionBlock:
-                        { error in
+                    FIRAuth.auth()?.sendPasswordResetWithEmail(emailFld.text!) { error in
+                        if let error = error {
                             
-                            if error != nil
-                            {
-                                print("There was an error processing the request")
-                                self.alertShowMethod("", message: "There was an error processing the request try again")
-                            }
-                            else
-                            {
-                                print("Password reset sent successfully")
-                                self.alertShowMethod("", message: "Password reset sent successfully your email id")
-                                
-                            }
+                            print(error)
+                            self.alertShowMethod("", message: "There was an error processing the request try again")
                             
-                    })
+                        } else {
+                            print("Password reset sent successfully")
+                            self.alertShowMethod("", message: "Password reset sent successfully your email id")
+                        }
+                    }
+
+                    
+//                    ref.resetPasswordForUser(emailFld.text, withCompletionBlock:
+//                        { error in
+//                            
+//                            if error != nil
+//                            {
+//                                print(error)
+//                                self.alertShowMethod("", message: "There was an error processing the request try again")
+//                            }
+//                            else
+//                            {
+//                                print("Password reset sent successfully")
+//                                self.alertShowMethod("", message: "Password reset sent successfully your email id")
+//                                
+//                            }
+//                    })
                     
                     
                 }
@@ -99,8 +115,8 @@ class ForgotPassVC: UIViewController
     
     @IBAction func signInAction(sender: AnyObject)
     {
-        
         self.navigationController?.popViewControllerAnimated(true)
+        self.view.endEditing(true)
     }
     
     
@@ -158,14 +174,5 @@ class ForgotPassVC: UIViewController
         alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Default, handler: nil))
         self.presentViewController(alert, animated: true, completion: nil)
     }
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
 
 }

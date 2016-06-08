@@ -8,40 +8,42 @@
 
 import UIKit
 
-class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableViewDataSource,UIPickerViewDataSource
+class HostVC: UIViewController,UIPickerViewDelegate,UIPickerViewDataSource
 {
-    var k = 1
+   
+    @IBOutlet var kosherFld: UITextField!
+    @IBOutlet var kosherSwitch: UISwitch!
     var user_id: String?
+    var dinnerID:String?
+    var updateDinner: String?
     @IBOutlet var timeTxtFld: UITextField!
     @IBOutlet var doneBtn: UIButton!
     @IBOutlet var doneView: UIView!
     @IBOutlet var seatTxtFld: UITextField!
     @IBOutlet var locationTxtFld: UITextField!
     @IBOutlet var tag_lineTxtFld: UITextField!
+    @IBOutlet var ageTxtFld: UITextField!
+    @IBOutlet var dateTxtFld: UITextField!
     @IBOutlet var dateBtn: UIButton!
     @IBOutlet var agePicker: UIPickerView!
-   
-    @IBOutlet var dateAndTimePicker: UIDatePicker!
-    
-    var placesTableView: UITableView  =   UITableView()
+    @IBOutlet var dateAndTimePicker: UIDatePicker!    
+    @IBOutlet var createDinnerBtn: UIButton!
+    var kosherString = "YES"
     var datePickerBtnTag = Int()
     var pickerBtnTag = Int()
-    var menuBtn = 0
-   
-    @IBOutlet var ageTxtFld: UITextField!
-    
-
-    @IBOutlet var dateTxtFld: UITextField!
     var location_id_str:NSString!
-    
-    
-    var placesArr: [AnyObject] = [AnyObject]()
+
     var ageRange = ["18 and under","19 to 23","24 to 29","30 to 35","36 to 41", "42 to 47","48 to 53","54 to 59","60 to 65","66 to 70"]
     var seats = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16"]
     
     
-    var ref = Firebase(url:"https://shabbatapp.firebaseio.com")
-    var host = Firebase(url:"https://shabbatapp.firebaseio.com/HOST")
+    //var ref = Firebase(url:"https://shabbatapp.firebaseio.com")
+    var ref = FIRDatabase.database().reference()
+    
+    //var host = Firebase(url:"https://shabbatapp.firebaseio.com/HOST")
+    //var host = ref.child("HOST")
+    
+    //var users = Firebase(url:"https://shabbatapp.firebaseio.com/USERS")
     let button = UIButton(type: .Custom)
     
     
@@ -49,60 +51,78 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
     {
         super.viewDidLoad()
         
-        
-        print(locationTxtFld.frame.origin.y)
-        print(locationTxtFld.frame.origin.x)
-        print(locationTxtFld.frame.height)
-        print(locationTxtFld.frame.width)
-        
-        
+                
+        selectedLocation = ""
+        selectedLocationId = ""
+        user_id = NSUserDefaults.standardUserDefaults().objectForKey("current_userID") as? String
         
         agePicker.hidden = true
         dateAndTimePicker.hidden = true
         doneView.hidden = true
         
-        //print(navigationController!.navigationBar.frame.height)
         navigationController!.navigationBar.barTintColor = UIColor.blackColor()
         
         seatTxtFld.attributedPlaceholder = NSAttributedString(string:"Choose Seats",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
-        locationTxtFld.attributedPlaceholder = NSAttributedString(string:"Locaton",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
+        locationTxtFld.attributedPlaceholder = NSAttributedString(string:"Location",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
         dateTxtFld.attributedPlaceholder = NSAttributedString(string:"Date",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
         timeTxtFld.attributedPlaceholder = NSAttributedString(string:"Time",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
         tag_lineTxtFld.attributedPlaceholder = NSAttributedString(string:"Tagline",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
         ageTxtFld.attributedPlaceholder = NSAttributedString(string:"Age",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
+        kosherFld.attributedPlaceholder = NSAttributedString(string:"Kosher",attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
         
+        //timeTxtFld.addTarget(self, action: "timePickerOpen:", forControlEvents: UIControlEvents.EditingChanged)
+        //timeTxtFld.delegate = self
         
-        
-        //for autocomplete for places
-        locationTxtFld.addTarget(self, action:#selector(edited), forControlEvents:UIControlEvents.EditingChanged)
-        
-        
-        placesTableView.frame   =   CGRectMake(locationTxtFld.frame.origin.x, locationTxtFld.frame.origin.y+locationTxtFld.frame.height, locationTxtFld.frame.width, locationTxtFld.frame.height*4);
-        placesTableView.backgroundColor = UIColor.whiteColor()
-        placesTableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: "cell")
-        self.placesTableView.dataSource = self
-        self.placesTableView.delegate = self
-        self.view.addSubview(placesTableView)
-        placesTableView.hidden = true
-        
-        
- 
         
         let nav1Lbl = UILabel(frame: CGRectMake(0, 0, 200, 44))
-        nav1Lbl.text = "HOST"
-        nav1Lbl.font = UIFont(name: "Helvetica-Bold", size: 20)
+        nav1Lbl.font = UIFont(name: "Montserrat-Bold", size: 20)
         nav1Lbl.textAlignment = .Center
         nav1Lbl.textColor = UIColor.whiteColor()
         self.navigationItem.titleView = nav1Lbl
-        
-        
-        button.addTarget(self, action:#selector(HostVC.openDrawer), forControlEvents: .TouchUpInside)
-        button.setImage(UIImage(named: "menu"), forState: .Normal)
-        //    button.tintColor =[UIColor blackColor];
+
+        //button.tintColor =[UIColor blackColor];
         button.frame = CGRectMake(0, 0, 30, 30)
         let bBarBtn: UIBarButtonItem = UIBarButtonItem(customView: button)
-        self.navigationItem.leftBarButtonItem = bBarBtn
+        self.navigationItem.leftBarButtonItem = bBarBtn        
         
+        if updateDinner == "UPDATE_DINNER"
+        {
+            nav1Lbl.text = "UPDATE DINNER"
+            button.addTarget(self, action:#selector(HostVC.backMethod), forControlEvents: .TouchUpInside)
+            button.setImage(UIImage(named: "backicon"), forState: .Normal)
+            //createDinnerBtn.setTitle("Update Dinner", forState: .Normal)
+           createDinnerBtn.setImage(UIImage(named: "dinner_update"), forState: .Normal)
+            let host = ref.child("HOST")
+            let userID = host.child(user_id!)
+            let dinner_data = userID.child(dinnerID!)
+            //let dinner_data = Firebase(url:"https://shabbatapp.firebaseio.com/HOST/" + user_id! + "/" + dinnerID!)
+            dinner_data.observeEventType(.Value, withBlock:
+                {
+                    snapshot in
+                    let dict = snapshot.value as? NSDictionary
+                    print(dict)
+                    
+                    self.ageTxtFld.text = dict!.objectForKey("age") as? String
+                    self.locationTxtFld.text = dict!.objectForKey("location") as? String
+                    self.seatTxtFld.text = dict!.objectForKey("seats") as? String
+                    self.tag_lineTxtFld.text = dict!.objectForKey("tagline") as? String
+                    self.timeTxtFld.text = dict!.objectForKey("time") as? String
+                    self.dateTxtFld.text = dict!.objectForKey("date") as? String
+                    
+                    
+            })
+            
+            
+            
+            
+            
+        }
+        else
+        {
+            nav1Lbl.text = "HOST"
+            button.addTarget(self, action:#selector(HostVC.openDrawer), forControlEvents: .TouchUpInside)
+            button.setImage(UIImage(named: "menu"), forState: .Normal)
+        }
         
         let settingBtn = UIButton(type: .Custom)
         settingBtn.addTarget(self, action:#selector(HostVC.openSetting), forControlEvents: .TouchUpInside)
@@ -115,6 +135,22 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
            
         dateAndTimePicker.backgroundColor = UIColor.whiteColor()
         
+    }
+    
+    
+//    func timePickerOpen()
+//    {
+//        self.view.endEditing(true)
+//        //datePickerBtnTag = sender.tag
+//        agePicker.hidden = true
+//        dateAndTimePicker.hidden = false
+//        dateAndTimePicker.datePickerMode = .Time
+//        doneView.hidden = false
+//    }
+    
+    func backMethod()
+    {
+        self.navigationController?.popViewControllerAnimated(true)
     }
     
     @IBAction func DoneBtnAction(sender: AnyObject)
@@ -146,117 +182,9 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
     
     func openDrawer()
     {
-        if (menuBtn==0)
-        {
-            button.setImage(UIImage(named: "cross"), forState: .Normal)
-            menuBtn += 1
-        }
-        else
-        {
-            button.setImage(UIImage(named: "menu"), forState: .Normal)
-            menuBtn -= 1
-        }
-        
-        
+        hostOrSeek = "HOST"
         self.mm_drawerController.toggleDrawerSide(MMDrawerSide.Left, animated: true, completion: nil)
     }
-    
-    
-    //MARK:  autocomplete table view datasource methods
-    func numberOfSectionsInTableView(tableView: UITableView) -> Int
-    {
-        return 1
-    }
-    
-    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int
-    {
-        return placesArr.count
-    }
-    
-    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell
-    {
-        let cell = tableView.dequeueReusableCellWithIdentifier("cell", forIndexPath: indexPath)
-        
-        
-        for object in cell.contentView.subviews
-        {
-            object.removeFromSuperview();
-        }
-        
-        
-        
-        
-        //Label in cell
-        let label = UILabel(frame: CGRectMake(0, 0, cell.frame.size.width, cell.frame.size.height))
-        label.text = placesArr[indexPath.row].objectForKey("Address") as? String
-        label.backgroundColor = UIColor.whiteColor()
-        cell.backgroundColor = UIColor.whiteColor()
-        cell.contentView.addSubview(label)
-        
-        
-        return cell
-    }
-    
-    //MARK:  autocomplete table view delegates methods
-    func tableView(tableView: UITableView, heightForRowAtIndexPath indexPath: NSIndexPath) -> CGFloat
-    {
-        return 40;
-    }
-    
-    func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath)
-    {
-        locationTxtFld.text = placesArr[indexPath.row].objectForKey("Address") as? String
-        location_id_str = placesArr[indexPath.row].objectForKey("Place_ID") as? String
-        self.locationTxtFld.frame = CGRectMake(self.view.frame.width/12.8,self.view.frame.height/1.73913, self.view.frame.width/1.3333333333,self.view.frame.height/18.8235294)
-        self.locationTxtFld.backgroundColor = UIColor.clearColor()
-        self.view.endEditing(true)
-        placesTableView.hidden = true
-        
-
-        
-    }
-    
-    func keyboardWasShown()
-    {
-        //        var info = notification.userInfo!
-        //        var keyboardFrame: CGRect = (info[UIKeyboardFrameEndUserInfoKey] as! NSValue).CGRectValue()
-        
-        UIView.animateWithDuration(0.5, animations: { () -> Void in
-            self.locationTxtFld.frame = CGRectMake(10, 150, self.view.frame.size.width-20, self.view.frame.height/16)
-             self.locationTxtFld.backgroundColor = UIColor.blackColor()
-              self.placesTableView.frame   =   CGRectMake(10,150+self.view.frame.height/16, self.view.frame.size.width-20, self.view.frame.height-150+self.view.frame.height/16);
-            self.view.bringSubviewToFront(self.placesTableView)
-            self.view.bringSubviewToFront(self.locationTxtFld)
-            
-            
-        })
-    }
-
-    
-    
-    
-    
-    func edited()
-    {
-        keyboardWasShown( )
-        if locationTxtFld.text == ""
-        {
-         placesTableView.hidden = true
-        locationTxtFld.frame = CGRectMake(self.view.frame.width/12.8,self.view.frame.height/1.73913, self.view.frame.width/1.3333333333,self.view.frame.height/18.8235294)
-        locationTxtFld.backgroundColor = UIColor.clearColor()
-         
-        }
-        else
-        {
-            self.apiFunction(locationTxtFld.text!)
-            placesTableView.hidden = false
-        }
-        
-    }
-    
-
-    
-       
     
 
     //Mark: Datasourse methods of picker
@@ -301,7 +229,6 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
     func pickerView(pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int)
     {
         
-        
         if pickerBtnTag == 222
         {
             ageTxtFld.text=ageRange[row]
@@ -310,8 +237,6 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
         {
            seatTxtFld.text=seats[row]
         }
-        
-        //agePicker.hidden = true
     }
     
     
@@ -319,17 +244,50 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
     
    
     
-   //MARK: create new Shabbat dinner
+   //MARK: create new Shabbat dinner or update shabbat dinner
     @IBAction func createNewShabbatDinnerMethod(sender: AnyObject)
     {
-        if seatTxtFld.text == "" || locationTxtFld.text == "" || tag_lineTxtFld.text == "" || timeTxtFld.text == "" || dateTxtFld.text == ""
+        
+      if ReachabilityNet.isConnectedToNetwork() == true
+       {
+        print("Internet connection OK")
+        
+        if seatTxtFld.text == "" || locationTxtFld.text == "" || tag_lineTxtFld.text == "" || timeTxtFld.text == "" || dateTxtFld.text == "" || ageTxtFld.text == ""
         {
-           self.alertShowMethod("", message: "Please fill all Feilds")
+            self.alertShowMethod("", message: "Please fill all fields")
+        }
+        
+        // To update Shabbat dinner
+        else if updateDinner == "UPDATE_DINNER"
+        {
+            print(dinnerID)
+            
+            let host = ref.child("HOST")
+            let userID = host.child(user_id!)
+            let dinner_data = userID.child(dinnerID!)
+            
+            //let dinner_data = Firebase(url:"https://shabbatapp.firebaseio.com/HOST/" + user_id! + "/" + dinnerID!)
+            let data =
+                [
+                    "user_id":user_id!,
+                    "seats":self.seatTxtFld.text!,
+                    "location":self.locationTxtFld.text!,
+                    "date":self.dateTxtFld.text!,
+                    "time":self.timeTxtFld.text!,
+                    "tagline":self.tag_lineTxtFld.text!,
+                    "age":self.ageTxtFld.text!
+            ]
+            
+            dinner_data.updateChildValues(data)            
+            self.navigationController?.popViewControllerAnimated(true)
+            self.alertShowMethod("", message: "Shabbat dinner is updated")
         }
             
         else
         {
-            let usr = Firebase(url:"https://shabbatapp.firebaseio.com/HOST/" + user_id!)
+            //let usr = Firebase(url:"https://shabbatapp.firebaseio.com/HOST/" + user_id!)
+            let host = ref.child("HOST")
+            let usr = host.child(user_id!)
             let newDinnerData = usr.childByAutoId()
             
             let data =
@@ -337,28 +295,43 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
                         "user_id":user_id!,
                         "seats":self.seatTxtFld.text!,
                         "location":self.locationTxtFld.text!,
-                        "location_id":location_id_str,
+                        "location_id":selectedLocationId,
                         "date":self.dateTxtFld.text!,
                         "time":self.timeTxtFld.text!,
                         "tagline":self.tag_lineTxtFld.text!,
+                        "age":self.ageTxtFld.text!,
+                        "kosher":self.kosherString
                       ]
             
             newDinnerData.setValue(data, withCompletionBlock:
             {
-                (error:NSError?, firebase:Firebase!) in
+                (error:NSError?, firebase:FIRDatabaseReference!) in
                 if (error != nil)
                 {
                     print("Data could not be saved.")
-                    self.alertShowMethod("", message: "Not created your Shabbat Dinner")
+                    self.alertShowMethod("", message: "Your shabbat dinner is not created")
                 }
                 else
                 {
                     print("Data saved successfully!")
-                    self.alertShowMethod("", message: "SuccessFully created your Shabbat Dinner")
+                    self.alertShowMethod("", message: "Successfully created your shabbat dinner")
+                    self.seatTxtFld.text = ""
+                    self.locationTxtFld.text = ""
+                    self.dateTxtFld.text = ""
+                    self.timeTxtFld.text = ""
+                    self.tag_lineTxtFld.text = ""
+                    self.ageTxtFld.text = ""                      
+                    
                 }
             })
             
         }
+      }
+      else
+      {
+        self.alertShowMethod("Internet connection error", message: "Please try again")
+      }
+        
     }
     
     @IBAction func agePicBtn(sender: AnyObject)
@@ -410,73 +383,6 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
     }
 
     
-    //MARK:  api function for autocomplete for places
-    func apiFunction(typpedStr: String)
-    {
-        var mutString = NSString(string: typpedStr)
-                
-        mutString = mutString.stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLQueryAllowedCharacterSet())!
-          
-        
-            
-            let url = NSURL(string: "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=" + (mutString as String) + "&types=address&language=fr&key=%20AIzaSyAqRxlbGhWi8TgHda6K23JRcTJciPmkBBc")
-            let request = NSURLRequest(URL: url!)
-            
-            let config = NSURLSessionConfiguration.defaultSessionConfiguration()
-            let session = NSURLSession(configuration: config)
-            
-            let task = session.dataTaskWithRequest(request, completionHandler: {(data, response, error) in
-                
-                self.placesArr.removeAll()
-                
-                
-                
-                do
-                {
-                    if let jsonResult = try NSJSONSerialization.JSONObjectWithData(data!, options: []) as? NSDictionary
-                    {
-                        print(jsonResult)
-                        
-                        let arr:NSArray = jsonResult["predictions"] as! NSArray
-                        
-                        
-                        for i in 0 ..< Int((jsonResult["predictions"]?.count)!)
-                        {
-                            
-                            let dic:NSMutableDictionary = arr.objectAtIndex(i) as! NSMutableDictionary
-                            
-                            let dic1:NSMutableDictionary = [:]
-                            dic1.setValue(dic["description"], forKey: "Address")
-                            dic1.setValue(dic["place_id"], forKey: "Place_ID")
-                            self.placesArr.append(dic1)
-                        }
-                        
-                        print(self.placesArr)
-                        
-                        dispatch_async(dispatch_get_main_queue(),
-                            {
-                                self.placesTableView.reloadData()
-                                return
-                        })
-                        
-                        
-                    }
-                }
-                catch let error as NSError
-                {
-                    print(error.localizedDescription)
-                }
-                
-                
-                
-            });
-            
-            // do whatever you need with the task e.g. run
-            task.resume()
-        
-    }
-
-    
     @IBAction func timePicAction(sender: AnyObject)
     {
         
@@ -503,32 +409,55 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
     
     override func viewWillAppear(animated: Bool)
     {
+        if selectedLocation != ""
+        {
+            locationTxtFld.text = selectedLocation
+        }
         navigationController!.navigationBar.barTintColor = UIColor.blackColor()
     }
     
-    
-    override func didReceiveMemoryWarning()
-    {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
-    }
-    
-
     
     //MARK: alert method
     func alertShowMethod(Title:String, message:String)
     {
         let alert = UIAlertController(title: Title, message: message, preferredStyle: UIAlertControllerStyle.Alert)
         
-        alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Default, handler: nil))
+        // Condition for create Successfully dinner
+        if message == "Successfully created your shabbat dinner" || message == "Shabbat dinner is updated"
+        {
+            let okAction = UIAlertAction(title: "OK", style: UIAlertActionStyle.Default) {
+                UIAlertAction in
+                
+                let hostList = (self.storyboard!.instantiateViewControllerWithIdentifier("HostDinnerListVC")) as! HostDinnerListVC
+                self.navigationController?.pushViewController(hostList, animated: true)
+                
+            }
+            alert.addAction(okAction)
+        }
+        else
+        {
+            alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Default, handler: nil))
+        }
+        
         self.presentViewController(alert, animated: true, completion: nil)
+
     }
     
-    
-    
+
+    //MARK: To Location search 
+    func textFieldDidBeginEditing(textField: UITextField)
+    {
+        if textField == locationTxtFld
+        {
+            let presentSearchVC = (self.storyboard!.instantiateViewControllerWithIdentifier("PresentSerachViewController")) as UIViewController
+            
+            self.presentViewController(presentSearchVC, animated: true, completion: nil)
+        }
+
+        
+    }
     
     //Handle KeyPad hide or show and picker and date picker also
-    
     func textFieldShouldBeginEditing(textField: UITextField) -> Bool
     {
         dateAndTimePicker.hidden = true
@@ -537,6 +466,7 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
         return true
     }
     
+    //Methods for dismiss keypad
     func textFieldShouldReturn(textField: UITextField) -> Bool
     {
         self.view.endEditing(true)
@@ -546,18 +476,28 @@ class HostVC: UIViewController,UIPickerViewDelegate,UITableViewDelegate,UITableV
     override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?)
     {
         self.view.endEditing(true)
+    }
+    
+    @IBAction func kosherSwitchAction(sender: UISwitch) {
+       
+        if sender.on == true
+        {
+            print("On")
+            kosherString = "YES"
+        }
+        else
+        {
+            print("Off")
+            kosherString = "NO"
+        }
         
     }
     
     
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
+    override func didReceiveMemoryWarning()
+    {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
     }
-    */
-
+  
 }
